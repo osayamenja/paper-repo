@@ -1,2 +1,4 @@
 # Jetbrains Metadata
-./.idea
+.idea
+out
+.DS_Store
