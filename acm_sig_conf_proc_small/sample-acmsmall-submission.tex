@@ -140,6 +140,8 @@
 %% of authors' names for this purpose.
 \renewcommand{\shortauthors}{Aimuyo and Singh}
 
+\renewcommand{\ata}{\verb|AlltoAll|}
+
 %%
 %% The abstract is a short summary of the work to be presented in the
 %% article.
@@ -200,9 +202,9 @@
 %%
 %% Keywords. The author(s) should pick words that accurately describe
 %% the work being presented. Separate the keywords with commas.
-\keywords{Mixture-of-Experts; Collective Communication; GPUs}
+\keywords{Mixture-of-Experts, Collective Communication, GPUs}
 
-\received{28 January 2024}
+\received{\today}
 %\received[revised]{12 March 2009}
 %\received[accepted]{5 June 2009}
 
@@ -218,25 +220,49 @@ These larger Transformer models achieve significantly better performance~\cite{D
 hence the appeal to scale their size continuously.
 However, this scale demands exorbitant compute resources,
 necessitating a distributed setting as memory requirements exceed the capacity of any
-single accelerator (GPU, TPU, FPGA, etc).
+single accelerator (GPU, TPU, FPGA, etc)~\cite{DBLP:journals/corr/abs-2201-11990}
 This interplay begs the question:
 \emph{how do we sidestep the high energy and hardware costs of scaling Large Transformer models?}
 
-Current work shows the Mixture-of-Experts architecture is a productive answer to this question.
-For example, the DeepSpeed team of Microsoft showed 5x less training time and costs
-and 10X lower inference latency for language MoE models with billions of parameters~\cite{pmlr-v162-rajbhandari22a}.
-Likewise, at 1.2 trillion parameters, Google's MoE model GLaM~\cite{pmlr-v162-du22c}, compared to GPT-3,
-consumes a third of the energy and half the FLOPs during training and inference, respectively.
-As of yet, the versatility of the MoE architecture has seen it applied to other workloads,
-such as vision~\cite{NEURIPS2021_48237d9f} and multimodal tasks~\cite{NEURIPS2022_3e67e84a}.
+Current work shows the Mixture-of-Experts (MoE) architecture is a productive answer to this question.
+In a nutshell, the
+For example, the recently released Mixtral 8x7B, a multilingual MoE model replacing each Feed Forward Network (FFN) per layer
+with 8 experts, outperforms LLaMA-2 70B and GPT 3.5 on seven benchmarks~\cite{mixtral8x7B}.
+Interestingly, Mixtral achieves this better performance at the inference cost of 12.9B parameters,
+subset activated per token, instead of its actual 46.7B parameters.
+Another example comes from the DeepSpeed team of Microsoft who showed 5x less training time for GPT-3 MoE 1.3B and
+7.3X faster inference for a trillion-parameter MoE model~\cite{pmlr-v162-rajbhandari22a}.
+Likewise, at 1.2 trillion parameters, Google's MoE model GLaM, compared to GPT-3,
+consumes a third of the energy and half the FLOPs during training and inference, respectively~\cite{pmlr-v162-du22c}.
+As of yet, the versatility of transformer MoE has seen it successfully applied to other workloads,
+such as vision~\cite{NEURIPS2021_48237d9f}, achieving 10.5x cheaper inference~\cite{puigcerver2023sparse},
+multimodal tasks~\cite{NEURIPS2022_3e67e84a}, and production recommender systems~\cite{DBLP:journals/corr/abs-2108-04690}.
 
 On the other hand, this architecture introduces new algorithmic and systems challenges,
-such as load balancing across experts, training instability and
-collective communication overhead~\cite{ShazeerMMDLHD17, zoph2022stmoe}.
-Existing literature <4 sources> points out this overhead due to the synchronous \emph{All-to-All} communication
-and propose solutions.
-However, to the best of our knowledge, no existing work quantifies this overhead,
-including its properties at the scale of hundreds to thousands of GPUs.
+such as load balancing across experts~\cite{ShazeerMMDLHD17}, training instability~\cite{NEURIPS2022_3e67e84a},
+expert capacity restriction leading to token dropping~\cite{gale2022megablocks},
+and collective communication overhead~\cite{DBLP:journals/corr/abs-2006-16668}.
+In this paper, we explicitly study the communication overhead due to \emph{All-to-All} (typeset as \verb|all2all|
+henceforth) which occur at the \verb|dispatch|, after routing tokens, and \verb|combine| stages within the MoE layer
+(\S \ref{sec:background}).
+
+\textbf{\emph{Motivation \& Related Work}}: In addition to scaling, there has also been greater drive towards
+identifying and tackling systems or software bottlenecks via profiling and analyzing the operational behavior of
+accelerators, memory or interconnects during training or inference.
+This methodology motivates questions like \emph{x} and \emph{y} which lead to pioneering research work
+such as vLLM~\cite{kwon2023efficient} and Tutel~\cite{hwang2023tutel}.
+Specifically within MoE computation, we find related work applies this technique to identify \verb|all2all| overhead;
+foe et al.~\cite{10.1145/3603269.3604869} find x, and so on.
+
+However, to the best of our knowledge, they do not use the state-of-the-art CUDA profiling systems~\cite{10.1145/3578244.3583736}:
+NVIDIA NSight Systems~\cite{nsys} and Nsight Compute~\cite{ncu}, which provides \emph{all} CUPTI metrics and x,
+de-facto Pytorch profiler\cite{} which exposes only a relevant subset of CUPTI metrics generally satisfying Deep Learning profiling use-cases.
+Understandably so, as the Nsight suite requires significant domain knowledge to leverage its vast capabilities fully,
+hence why they are more prevalent in the High-Performance Computing (HPC)~\cite{} and performance engineering~\cite{10.1145/3578244.3583736} communities.
+
+\textbf{\emph{Contributions}}: More generally, we first do y.
+
+\textbf{\emph{Summary}}:
 %In addressing this gap, we make the following novel contributions:
 %\begin{itemize}
 %  \item Analytically prove a lower and upper bound for the number of \emph{All-to-All} necessary per training step in the MoE architecture.
