@@ -1,0 +1,69 @@
+%! Date = 1/8/24
+
+\section{Introduction}\label{sec:introduction}
+Since the advent of the Transformer~\cite{NEURIPS2017_3f5ee243}, existing trends in language model complexity
+indicate a steep exponential increase~\cite{DBLP:journals/corr/abs-2201-11990} in model parameters.
+These larger Transformer models achieve significantly better performance~\cite{DBLP:journals/corr/abs-2005-14165},
+hence the appeal to scale their size continuously.
+However, this scale demands exorbitant compute resources,
+necessitating a distributed setting as memory requirements exceed the capacity of any
+single accelerator (GPU, TPU, FPGA, etc.)~\cite{DBLP:journals/corr/abs-2201-11990}
+This interplay begs the question:
+\emph{how do we sidestep the high energy and hardware costs of scaling Large Transformer models?}
+
+Current work shows the Mixture-of-Experts (MoE) architecture is a productive answer to this question.
+In a nutshell, the
+For example, the recently released Mixtral 8x7B, a multilingual MoE model replacing each Feed Forward Network (FFN) per layer
+with 8 experts, outperforms LLaMA-2 70B and GPT 3.5 on seven benchmarks~\cite{mixtral8x7B}.
+Interestingly, Mixtral achieves this better performance at the inference cost of 12.9B parameters,
+subset activated per token, instead of its actual 46.7B parameters.
+Another example comes from the DeepSpeed team of Microsoft who showed 5x less training time for GPT-3 MoE 1.3B and
+7.3X faster inference for a trillion-parameter MoE model~\cite{pmlr-v162-rajbhandari22a}.
+Likewise, at 1.2 trillion parameters, Google's MoE model GLaM, compared to GPT-3,
+consumes a third of the energy and half the FLOPs during training and inference, respectively~\cite{pmlr-v162-du22c}.
+Currently, the versatility of transformer MoE has seen it successfully applied to other workloads,
+such as vision~\cite{NEURIPS2021_48237d9f}, achieving 10.5x cheaper inference~\cite{puigcerver2023sparse},
+multimodal tasks~\cite{NEURIPS2022_3e67e84a}, and production recommender systems~\cite{DBLP:journals/corr/abs-2108-04690}.
+
+On the other hand, this architecture introduces new algorithmic and systems challenges,
+such as load balancing across experts~\cite{ShazeerMMDLHD17}, training instability~\cite{NEURIPS2022_3e67e84a},
+expert capacity restriction leading to token dropping~\cite{gale2022megablocks},
+and collective communication overhead~\cite{DBLP:journals/corr/abs-2006-16668}.
+In this paper, we explicitly study the communication overhead due to \ata that occur
+at \verb|dispatch|, after routing tokens, and \verb|combine| stages within the MoE layer (\S \ref{sec:background}).
+
+\textbf{\emph{Related Work}}: More broadly, in addition to scaling, there has also been greater drive towards
+identifying and tackling systems or software bottlenecks via tracing or profiling and analyzing the operational behavior of
+accelerators, memory or interconnects during training or inference.
+This methodology substantiates novel inquiries such as \emph{memory fragmentation in transformer LLM inference}
+and \emph{adaptive parallelism during MoE training}, which motivated pioneering research work
+vLLM~\cite{kwon2023efficient} and Tutel~\cite{hwang2023tutel}, respectively.
+Specifically within MoE computation, we find related work in Janus~\cite{10.1145/3603269.3604869} and
+Lina~\cite{288705} apply kernel tracing to quantify \ata overhead in GPU systems
+
+\textbf{\emph{Gaps \& Motivation}}: However, we identify three gaps which we seek to address in this paper.
+First, the results reported in existing work on the ratio of \ata overhead vary significantly
+even for similar MoE model configurations, and number and types of GPUs. For example, for Transformer-XL
+at a billion parameters, configured with 16 experts and trained on 16 GPUs, the overhead reported by
+Liu et al.~\cite{10.1145/3603269.3604869} and Li et al.~\cite{288705} differ by about 1.19x.
+Second, even when isolated to a single work, we still observe \ata overhead variability across models
+of which there is no explanation as to its occurrence~\cite{10.1145/3603269.3604869}.
+In other words, current literature does not answer the question: \textbf{\emph{are there systems or network impediments
+exacerbating the overhead of synchronous All-to-All in distributed MoE computation?}}
+Finally, to the best of our knowledge, existing work does not use the low-overhead,
+state-of-the-art CUDA profiling systems~\cite{10.1145/3578244.3583736}: NVIDIA NSight Systems~\cite{nsys} and Nsight Compute~\cite{ncu}, which provide access to \emph{all}
+CUDA Profiling Tools Interface (CUPTI) application tracing and kernel(s) profiling metrics~\cite{cupti}.
+On the other hand, the de-facto Pytorch profiler, which is predominantly adopted,
+exposes only a subset of CUPTI metrics, but is much easier to use~\cite{pytorchProfiler, 10.5555/3454287.3455008}.
+
+\textbf{\emph{Contributions}}: More generally, we aim to address these gaps.
+
+\textbf{\emph{Summary}}:
+%In addressing this gap, we make the following novel contributions:
+%\begin{itemize}
+%  \item Analytically prove a lower and upper bound for the number of \emph{All-to-All} necessary per training step in the MoE architecture.
+%  \item Quantify \emph{All-to-All} overhead for Distributed MoE in the multi-node setting.
+%  \item Provide a model, based on Amdahl's law, that shows projected speedup as a function of reducing the overhead of \emph{All-to-All} in the multi-node and optimizing compute for single-node.
+%\end{itemize}
+
+%The rest of the paper is as follows: brief introduction to the MoE architecture, experimental setup, methodology, results/analysis and conclusion.
