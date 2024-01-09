@@ -1,0 +1,31 @@
+%! Date = 1/8/24
+
+\begin{abstract}
+    Through sparsely activated computation, the Mixture-of-Experts (MoE) architecture
+    mitigates the skyrocketing scaling costs, for training and inference, and power consumption of larger Deep Learning models.
+    Existing work demonstrates that this architecture achieves these savings without compromising latency or model accuracy.
+    However, MoE computation necessitates frequent collective communication that poses
+    significant overhead, especially at scale.
+    \textbf{Analytically and empirically quantifying this overhead in MoE transformers across NLG and CV
+    workloads is the motivation for this paper}
+    \footnote{Training Code available here: \url{https://github.com/osayamenja/Megatron-DeepSpeed}}
+    \footnote{Jupyter Notebook for reproducing all results available here: \url{https://github.com/osayamenja/DataCruncher}}
+    We seek to clarify the scaling behavior of synchronous \ata at hundreds of GPUs in a high-bandwidth
+    multi-node supercomputer.
+    Further, we aim to address whether there are any previously unreported bottlenecks exacerbating the overhead of
+    this critical collective communication operation.
+
+    In particular, using NVIDIA NSight and the \textbf{Perlmutter} supercomputer, we profile the training and inference of GPT-3 MoE 6.7B (only training),
+    Mixtral 8x7B, and Swin-MoE, arriving at \textbf{12} takeaways recommending best practices for
+    distributed MoE computation and suggestions for future research work.
+    We discover that the overhead due to synchronous \ata in these MoE models bottlenecks a training step by
+    up to \textbf{60\%}.
+    Further, we demonstrate that synchronous \ata is highly \emph{sensitive} to delays in a model's critical
+    path.
+    We show that its execution times exhibit a long-tail distribution with a \textbf{4.9X} mean slowdown
+    independent of any system or software bottlenecks, even within NVLink interconnected GPUs.
+    We reproduce this finding in the Perlmutter with a state-of-the art multi-node interconnect as well.
+    In addition, using our empirical findings, we contrive and leverage a minuscule predictive model based on Amdahl's law
+    to motivate our suggestions for future research in collective algorithms and network interconnects to tackle
+    this communication overhead.
+\end{abstract}
